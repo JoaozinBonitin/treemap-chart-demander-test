@@ -52,15 +52,26 @@
   function colorFromRaw(ctx) {
     if (ctx.type !== 'data') return 'transparent'; 
 
-    const value = ctx.raw.v;
-    let alpha = ((Math.log(value) / 5) - 2.3);
-    alpha = Math.min(Math.max(alpha, 0), 1); // Garante que alpha está entre 0 e 1
-    return `rgba(255, 26, 104, ${alpha})`;
-  }
+    const migrationIndex = ctx.raw._data.children[0].migration;
 
+    const dataMigration = ctx.dataset.tree.map(d => d.migration);
+
+    const maxValue = Math.max(...dataMigration);
+    const minValue = Math.min(...dataMigration);
+
+    // fiz a normalização dos valores para coloca-los em uma escala de 0 a 1
+    const normalizarValor = (migrationIndex - minValue) / (maxValue - minValue);
+
+    // faz o calculo das cores com base na escala do valor normalizado
+    const red = Math.round(255 * normalizarValor);
+    const green = Math.round(255 * (1 - normalizarValor));
+    
+    return `rgba(${red}, ${green}, 0, 0.9)`;
+}
+  
   async function updateChart(fileName) {
     const data = await fetchData(fileName);
-    if (data.length === 0) return; // Se não houver dados para o estado, não faça nada
+    if (data.length === 0) return;
 
     const canvas = document.getElementById('myChart');
     const ctx = canvas.getContext('2d');
@@ -71,10 +82,11 @@
 
     const chartData = {
       datasets: [{
-        label: 'Numero Populacional',
+        label: 'Indice de Migração',
         tree: layoutData.map(d => ({
           name: d.name,
           value: d.value,
+          migration: d.migrationIndex,
           x: d.x,
           y: d.y,
           width: d.width,
@@ -86,7 +98,7 @@
         borderWidth: 1,
         labels: {
           display: true,
-          color: 'white' // Ajusta a cor dos rótulos
+          color: 'black' // Ajusta a cor dos rótulos
         }
       }]
     };
@@ -110,4 +122,4 @@
   });
 
   // Inicializar o gráfico com o estado selecionado por padrão
-  updateChart('sao_paulo.json');
+  updateChart('2020.json');
